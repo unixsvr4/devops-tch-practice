@@ -1,0 +1,12 @@
+eksctl create cluster \
+  --name tch-prod \
+  --region us-east-1 \
+  --nodegroup-name workers \
+  --node-type m5.xlarge \
+  --nodes 3 \
+  --nodes-min 2 \
+  --nodes-max 6 \
+  --managed \
+  --private-networking \              # nodes in private subnets
+  --endpoint-private-access=true \
+  --endpoint-public-access=false      # NO public API endpoint

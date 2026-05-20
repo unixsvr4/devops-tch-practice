@@ -1,0 +1,27 @@
+groups:
+  - name: payment-slos
+    rules:
+      # SLO: 99.9% success rate on payment transactions
+      - alert: PaymentErrorRateHigh
+        expr: |
+          sum(rate(http_requests_total{job="payment-service",status=~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total{job="payment-service"}[5m])) > 0.001
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Payment error rate above SLO (>0.1%)"
+          runbook: "https://wiki.tch.internal/runbooks/payment-errors"
+
+      # SLO: p99 latency < 500ms
+      - alert: PaymentLatencyHigh
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket{job="payment-service"}[5m])) by (le)
+          ) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Payment p99 latency above 500ms"

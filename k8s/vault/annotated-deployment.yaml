@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  namespace: payment-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payment-service
+  template:
+    metadata:
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "payment-app"
+        vault.hashicorp.com/agent-inject-secret-config: "secret/data/payment-app"
+        vault.hashicorp.com/agent-inject-template-config: |
+          {{- with secret "secret/data/payment-app" -}}
+          export DB_PASSWORD="{{ .Data.data.db_password }}"
+          export API_KEY="{{ .Data.data.api_key }}"
+          {{- end }}
+    spec:
+      serviceAccountName: payment-app-sa   # mapped to Vault role via IRSA/K8s auth
+      containers:
+        - name: app
+          image: ghcr.io/myorg/payment-app:latest
+          command: ["/bin/sh", "-c", "source /vault/secrets/config && ./start.sh"]
