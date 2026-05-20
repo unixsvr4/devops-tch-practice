@@ -1,0 +1,17 @@
+filebeat.inputs:
+  - type: log
+    enabled: true
+    paths:
+      - /logs/*.log
+    tags: ["practice"]
+
+output.elasticsearch:
+  hosts: ["elasticsearch:9200"]
+  index: "filebeat-practice-%{+yyyy.MM.dd}"
+
+setup.kibana:
+  host: "kibana:5601"
+
+setup.ilm.enabled: false
+setup.template.name: "filebeat-practice"
+setup.template.pattern: "filebeat-practice-*"

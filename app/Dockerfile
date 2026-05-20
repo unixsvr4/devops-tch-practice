@@ -1,0 +1,16 @@
+# Multi-arch: arm64 (M1) + amd64 CI runners
+FROM python:3.12-slim AS builder
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+
+FROM python:3.12-slim
+WORKDIR /app
+COPY --from=builder /install /usr/local
+COPY main.py .
+RUN adduser --disabled-password --gecos "" --uid 1001 appuser
+USER 1001
+EXPOSE 8080
+HEALTHCHECK --interval=15s --timeout=3s \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
