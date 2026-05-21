@@ -451,19 +451,19 @@ bash sonarqube/scan.sh       # script auto-detects and uses it
 
 ### Step 9 — CI/CD pipeline reference
 
-Point to `.github/workflows/secure-pipeline.yml`. Walk through the 6 stages:
+Point to `.github/workflows/secure-pipeline.yml` (**triggers on every push to main**). Walk through the 5 stages:
 
 ```
-commit → lint/test → SAST (SonarQube) → build + Trivy scan → deploy staging
-       → DAST (OWASP ZAP) → manual approval gate → promote to prod
+commit → lint + pytest → SAST (Bandit) ──┐→ deploy staging (stub)
+                       → build + Trivy ──┘→ DAST (stub) → prod gate
 ```
 
 **Key talking points:**
-- SonarQube Quality Gate blocks the pipeline — same as Step 8 locally
-- Trivy exits with code 1 on CRITICAL CVE — **blocks the pipeline**
-- DAST runs against staging, not prod — finds runtime vulns static analysis misses
+- Bandit SAST scans for security hotspots (medium+ severity) — no external token needed
+- Trivy scans the container image for CRITICAL/HIGH CVEs; set `exit-code: 1` to block on them in a real engagement (report-only here so the demo stays green with OS-level CVEs from the base image)
+- DAST stub shows where OWASP ZAP would scan staging — finds runtime vulns static analysis misses
 - ArgoCD pulls from git (GitOps) — git IS the audit trail for every deployment
-- Manual approval gate before prod — CAB process codified into the pipeline
+- Manual approval gate before prod — uncomment `environment: production` in the workflow and add a required reviewer in GitHub Settings → Environments
 
 **Jenkins equivalent:** `Jenkinsfile` at repo root.
 
