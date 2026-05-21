@@ -1,10 +1,10 @@
 name: Secure CI Pipeline
 
+# Reference pipeline — trigger manually only so GitHub doesn't run it on every push.
+# In a real engagement this would also have: push/pull_request triggers.
+# To run manually: GitHub → Actions → Secure CI Pipeline → Run workflow
 on:
-  push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 env:
   IMAGE_NAME: ghcr.io/${{ github.repository }}/app
