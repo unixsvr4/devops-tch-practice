@@ -327,7 +327,39 @@ capabilities:
 
 ---
 
-### Step 8 — CI/CD pipeline reference
+### Step 8 — SonarQube SAST scan (local)
+
+Run a real static analysis scan against the payment service:
+
+```bash
+# From repo root — starts SonarQube + Postgres, then scans app/
+bash sonarqube/scan.sh
+```
+
+First run takes ~2 minutes (SonarQube DB initialisation). Subsequent runs ~20s.
+
+When done:
+1. Open **http://localhost:9000** → log in `admin / admin`
+2. Click **Projects → TCH Payment Service**
+3. Review: **Bugs**, **Vulnerabilities**, **Security Hotspots**, **Code Smells**, **Coverage**
+
+The scan output ends with:
+```
+✓ Quality Gate: OK
+Results → http://localhost:9000/dashboard?id=tch-payment-app
+```
+
+**What to say:** *"SonarQube is the SAST gate in our pipeline — it catches security hotspots, hardcoded secrets, SQL injection patterns, and code smells before the image is built. The Quality Gate is configured to fail the pipeline if new Blocker issues are introduced or coverage drops below threshold. That's the `sonar.qualitygate.wait=true` flag in the GitHub Actions job. In this repo the pipeline trigger is manual (`workflow_dispatch`) so it doesn't run on every push, but in production it would gate every PR."*
+
+**Native arm64 scanner (faster):**
+```bash
+brew install sonar-scanner   # one-time, native M1 binary
+bash sonarqube/scan.sh       # script auto-detects and uses it
+```
+
+---
+
+### Step 9 — CI/CD pipeline reference
 
 Point to `.github/workflows/secure-pipeline.yml`. Walk through the 6 stages:
 
@@ -337,6 +369,7 @@ commit → lint/test → SAST (SonarQube) → build + Trivy scan → deploy stag
 ```
 
 **Key talking points:**
+- SonarQube Quality Gate blocks the pipeline — same as Step 8 locally
 - Trivy exits with code 1 on CRITICAL CVE — **blocks the pipeline**
 - DAST runs against staging, not prod — finds runtime vulns static analysis misses
 - ArgoCD pulls from git (GitOps) — git IS the audit trail for every deployment
@@ -346,7 +379,7 @@ commit → lint/test → SAST (SonarQube) → build + Trivy scan → deploy stag
 
 ---
 
-### Step 9 — Shut down everything
+### Step 10 — Shut down everything
 
 ```bash
 cd devops-tch-practice

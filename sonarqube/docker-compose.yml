@@ -1,0 +1,51 @@
+name: tch-sonarqube
+
+services:
+  # SonarQube Community Edition — arm64 native on M1
+  sonarqube:
+    image: sonarqube:lts-community
+    ports: ["9000:9000"]
+    environment:
+      - SONAR_JDBC_URL=jdbc:postgresql://sonar-postgres:5432/sonar
+      - SONAR_JDBC_USERNAME=sonar
+      - SONAR_JDBC_PASSWORD=sonar
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true   # skip vm.max_map_count check on Mac
+    volumes:
+      - sonarqube-data:/opt/sonarqube/data
+      - sonarqube-logs:/opt/sonarqube/logs
+      - sonarqube-extensions:/opt/sonarqube/extensions
+    depends_on:
+      sonar-postgres:
+        condition: service_healthy
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9000/api/system/status | grep -q '\"status\":\"UP\"'"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+
+  sonar-postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=sonar
+      - POSTGRES_PASSWORD=sonar
+      - POSTGRES_DB=sonar
+    volumes:
+      - sonar-postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sonar"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  sonarqube-data:
+  sonarqube-logs:
+  sonarqube-extensions:
+  sonar-postgres-data:

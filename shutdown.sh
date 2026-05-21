@@ -23,13 +23,23 @@ delete_ns() {
 echo "Shutting down devops-tch-practice demo..."
 
 # ── [1] Background scripts ───────────────────────────────────────────────────
-echo "[1/4] Stopping background scripts..."
+echo "[1/5] Stopping background scripts..."
 pkill -f "generate_traffic.sh" 2>/dev/null \
     && echo "  ✓ generate_traffic.sh stopped" \
     || echo "  · generate_traffic.sh was not running"
 
-# ── [2] Docker Compose stack ─────────────────────────────────────────────────
-echo "[2/4] Stopping Docker Compose services (tch-practice)..."
+# ── [2] SonarQube stack (optional — only if running) ─────────────────────────
+echo "[2/5] Stopping SonarQube (if running)..."
+SONAR_COMPOSE="$(cd "$(dirname "$0")/sonarqube" && pwd)/docker-compose.yml"
+if docker compose -f "$SONAR_COMPOSE" ps -q 2>/dev/null | grep -q .; then
+    docker compose -f "$SONAR_COMPOSE" down
+    echo "  ✓ SonarQube stopped"
+else
+    echo "  · SonarQube was not running"
+fi
+
+# ── [3] Docker Compose stack ─────────────────────────────────────────────────
+echo "[3/5] Stopping Docker Compose services (tch-practice)..."
 COMPOSE_DIR="$(cd "$(dirname "$0")/observability" && pwd)"
 if docker compose -f "$COMPOSE_DIR/docker-compose.yml" ps -q 2>/dev/null | grep -q .; then
     docker compose -f "$COMPOSE_DIR/docker-compose.yml" down
@@ -38,14 +48,14 @@ else
     echo "  · No compose containers were running"
 fi
 
-# ── [3] Kubernetes namespaces (wait for pods to fully stop) ──────────────────
-echo "[3/4] Removing Kubernetes resources..."
+# ── [4] Kubernetes namespaces (wait for pods to fully stop) ──────────────────
+echo "[4/5] Removing Kubernetes resources..."
 kubectl config use-context orbstack 2>/dev/null || true
 delete_ns payment-app
 delete_ns gatekeeper-system
 
-# ── [4] Local Docker image ────────────────────────────────────────────────────
-echo "[4/4] Removing local build image..."
+# ── [5] Local Docker image ────────────────────────────────────────────────────
+echo "[5/5] Removing local build image..."
 if docker image inspect tch-payment-app:local &>/dev/null 2>&1; then
     docker rmi tch-payment-app:local
     echo "  ✓ Image tch-payment-app:local removed"
