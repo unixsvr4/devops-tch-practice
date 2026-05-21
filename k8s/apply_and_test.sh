@@ -53,7 +53,7 @@ echo "$RESULT"
 if echo "$RESULT" | grep -qiE "denied|webhook|not allowed|privileged"; then
     echo ""
     echo "PASS — privileged pod was rejected by Gatekeeper."
-    echo "Interview point: this is Policy as Code — the constraint is in git,"
+    echo "Talking point: this is Policy as Code — the constraint is in git,"
     echo "version-controlled, peer-reviewed, and enforced at admission time."
 else
     echo ""

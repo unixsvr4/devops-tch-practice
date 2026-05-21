@@ -62,9 +62,9 @@ echo ""
 echo "Credential #2 (different username, same role — blast radius isolation):"
 V read database/creds/payment-app-role
 
-# ── 3. Interview talking points ───────────────────────────────────────────────
+# ── 3. Talking points ───────────────────────────────────────────────
 echo ""
-echo "==[3/3] Interview Talking Points =="
+echo "==[3/3] Talking Points =="
 echo "  · Each pod gets a UNIQUE rotating DB credential — no shared passwords"
 echo "  · Auto-expire after 1h — no manual rotation runbooks"
 echo "  · In K8s: Vault Agent Injector reads pod annotations,"

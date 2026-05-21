@@ -97,7 +97,7 @@ The dashboard auto-refreshes every 5 seconds. If panels show "No data", confirm 
 
 You'll see 6 live panels:
 
-| Panel | Golden Signal | What to say in the interview |
+| Panel | Golden Signal | What to say |
 |-------|--------------|------------------------------|
 | Payment Request Rate | Traffic | "We alert when rate is 2× the 30-min baseline — catches DDoS and viral spikes before customers feel it" |
 | 5xx Error Rate | Errors | "SLO is 99.9% success rate. Alert fires at >0.1% error rate sustained for 2 minutes" |
@@ -401,18 +401,45 @@ bash sonarqube/scan.sh
 
 First run takes ~2 minutes (SonarQube DB initialisation). Subsequent runs ~20s.
 
-When done:
-1. Open **http://localhost:9000** → log in `admin / admin`
-2. Click **Projects → TCH Payment Service**
-3. Review: **Bugs**, **Vulnerabilities**, **Security Hotspots**, **Code Smells**, **Coverage**
-
-The scan output ends with:
+The scan prints a direct link when it finishes:
 ```
 ✓ Quality Gate: OK
-Results → http://localhost:9000/dashboard?id=tch-payment-app
+Results  → http://localhost:9000/dashboard?id=tch-payment-app
+Login    → admin / admin
 ```
 
-**What to say:** *"SonarQube is the SAST gate in our pipeline — it catches security hotspots, hardcoded secrets, SQL injection patterns, and code smells before the image is built. The Quality Gate is configured to fail the pipeline if new Blocker issues are introduced or coverage drops below threshold. That's the `sonar.qualitygate.wait=true` flag in the GitHub Actions job. In this repo the pipeline trigger is manual (`workflow_dispatch`) so it doesn't run on every push, but in production it would gate every PR."*
+**Click that URL directly** — it takes you straight to the project dashboard. No navigation needed.
+
+If you're already in the SonarQube UI and need to get back:
+1. Open **http://localhost:9000**
+2. Log in: `admin` / `admin`
+3. The home page shows **"TCH Payment Service"** as a card — click it
+4. If the home page is empty, click **Projects** in the top navigation bar → the project appears there
+
+---
+
+#### What you'll see on the project dashboard
+
+The dashboard is divided into two columns — **Reliability**, **Security**, and **Maintainability**:
+
+| Metric | What it means | Current result |
+|--------|--------------|----------------|
+| **Bugs** | Logic errors likely to cause wrong behaviour | 0 |
+| **Vulnerabilities** | Confirmed security issues | 0 |
+| **Security Hotspots** | Code that needs manual security review | 4 |
+| **Code Smells** | Maintainability issues (tech debt) | 1 |
+| **Coverage** | % of lines covered by tests | 0.0% (no tests yet) |
+| **Duplications** | Copy-pasted code blocks | 0.0% |
+
+**Navigate the dashboard:**
+- Click **Security Hotspots** → see the 4 flagged locations, click each to read the review question (e.g. "Make sure this random value is cryptographically secure")
+- Click **Code Smells** → see the 1 issue, its location, and the remediation effort estimate
+- Click **Measures** tab (top of project page) → full breakdown of every metric category
+- Click **Code** tab → file-by-file view with inline issue markers
+
+---
+
+**What to say:** *"SonarQube is the SAST gate in our pipeline — it catches security hotspots, hardcoded secrets, SQL injection patterns, and code smells before the image is ever built. The 4 security hotspots here are flagged for human review: they're not confirmed vulnerabilities but they require a developer to read and acknowledge them. The Quality Gate is configured to fail the pipeline if new Blocker issues are introduced or coverage drops below threshold — that's `sonar.qualitygate.wait=true` in the GitHub Actions job. Every PR gets gated before it can merge."*
 
 **Native arm64 scanner (faster):**
 ```bash
