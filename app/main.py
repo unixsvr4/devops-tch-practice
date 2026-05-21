@@ -89,9 +89,6 @@ async def create_payment():
     # 1.5% DB timeout — realistic for high-load payment processing
     if random.random() < 0.015:
         PAYMENT_ERRORS.labels(error_type="db_timeout").inc()
-        msg = structlog.get_logger().new().bind(
-            event="payment.db_timeout", payment_id=payment_id, amount=amount
-        )
         _write_log(str({"level": "error", "event": "payment.db_timeout",
                         "payment_id": payment_id, "amount": amount}))
         raise HTTPException(status_code=500, detail="Payment processor timeout")
