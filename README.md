@@ -97,7 +97,7 @@ The dashboard auto-refreshes every 5 seconds. If panels show "No data", confirm 
 
 You'll see 6 live panels:
 
-| Panel | Golden Signal | What to say |
+| Panel | Golden Signal | Analysis |
 |-------|--------------|------------------------------|
 | Payment Request Rate | Traffic | "We alert when rate is 2× the 30-min baseline — catches DDoS and viral spikes before customers feel it" |
 | 5xx Error Rate | Errors | "SLO is 99.9% success rate. Alert fires at >0.1% error rate sustained for 2 minutes" |
@@ -149,7 +149,7 @@ bash observability/promql.sh --traffic
 - `[1m]` = 1-minute window — fast for live incident detection; use `[5m]` in alert rules to reduce noise
 - `by (endpoint)` = split the result per endpoint label
 
-> *Say: "This is the traffic golden signal. A sudden drop to zero on /api/payments is the first sign of an outage — before any customer complains."*
+> *Analysis: "This is the traffic golden signal. A sudden drop to zero on /api/payments is the first sign of an outage — before any customer complains."*
 
 ---
 
@@ -180,7 +180,7 @@ bash observability/promql.sh --errors
 - `status_code=~"5.."` is a **regex label matcher** — matches 500, 502, 503, 504 in one expression
 - Dividing errors by total gives the error ratio; ×100 for percentage
 
-> *Say: "Our SLO target is 99.9% — that's 0.1% max error rate. The `=~` operator is Prometheus regex matching. If this stays above 0.1% for 2 minutes, PaymentErrorRateHigh fires and pages the on-call."*
+> *Analysis: "Our SLO target is 99.9% — that's 0.1% max error rate. The `=~` operator is Prometheus regex matching. If this stays above 0.1% for 2 minutes, PaymentErrorRateHigh fires and pages the on-call."*
 
 ---
 
@@ -219,7 +219,7 @@ bash observability/promql.sh --latency
 - `by (le, endpoint)` — `le` = "less than or equal to", the bucket boundary; required for histogram_quantile
 - The gap between p99 and p50 is the tail latency story
 
-> *Say: "histogram_quantile is the standard Prometheus pattern for percentiles. The gap between p50 and p99 shows tail latency — p99 of 845ms while p50 is 64ms means a small slice of customers wait 13× longer. Averages completely hide this."*
+> *Analysis: "histogram_quantile is the standard Prometheus pattern for percentiles. The gap between p50 and p99 shows tail latency — p99 of 845ms while p50 is 64ms means a small slice of customers wait 13× longer. Averages completely hide this."*
 
 ---
 
@@ -239,7 +239,7 @@ bash observability/promql.sh --saturation
   instance=app:8080  job=tch-payment-app    2.000
 ```
 
-> *Say: "Saturation is the hardest golden signal because it's service-specific. In-flight requests is a leading indicator — when this climbs, latency follows seconds later. We alert at 50 to scale out before customers feel degradation."*
+> *Analysis: "Saturation is the hardest golden signal because it's service-specific. In-flight requests is a leading indicator — when this climbs, latency follows seconds later. We alert at 50 to scale out before customers feel degradation."*
 
 ---
 
@@ -269,7 +269,7 @@ bash observability/promql.sh --slo
   error_type=invalid_id        0.355
 ```
 
-> *Say: "If this reads 99.5%, we've burned 5× our daily error budget in one hour — at that rate the monthly budget exhausts in 6 hours. That triggers a deploy freeze. We run a 1h window for fast-burn detection and a 30d window for monthly stakeholder reporting."*
+> *Analysis: "If this reads 99.5%, we've burned 5× our daily error budget in one hour — at that rate the monthly budget exhausts in 6 hours. That triggers a deploy freeze. We run a 1h window for fast-burn detection and a 30d window for monthly stakeholder reporting."*
 
 ---
 
@@ -280,7 +280,7 @@ bash observability/promql.sh --slo
 bash observability/promql.sh --query 'rate(http_requests_total{job="tch-payment-app"}[30s])'
 ```
 
-> *Say: "In production I query Prometheus directly from bash in runbooks and incident scripts. When a page fires at 3am I don't want to open a browser — I run the script and see numbers immediately."*
+> *Analysis: "In production I query Prometheus directly from bash in runbooks and incident scripts. When a page fires at 3am I don't want to open a browser — I run the script and see numbers immediately."*
 
 ---
 
@@ -294,7 +294,7 @@ To see all alert rules and their current state in Prometheus:
 2. You'll see all 5 rules: `PaymentLatencyHigh`, `PaymentErrorRateHigh`, `SLOErrorBudgetBurning`, `PaymentTrafficAnomaly`, `PaymentServiceSaturated`
 3. Click any rule name to expand its current evaluation result
 
-> *Say: "Alert rules live in `observability/prometheus/alerts.yml` — version-controlled and reviewed in PRs like any other code. In production these route to PagerDuty for the payment on-call and Slack for the engineering channel. The `runbook` annotation in each alert links directly to the remediation playbook so the responder doesn't waste time searching."*
+> *Analysis: "Alert rules live in `observability/prometheus/alerts.yml` — version-controlled and reviewed in PRs like any other code. In production these route to PagerDuty for the payment on-call and Slack for the engineering channel. The `runbook` annotation in each alert links directly to the remediation playbook so the responder doesn't waste time searching."*
 
 ---
 
@@ -322,7 +322,7 @@ Credential #1:  username=v-token-payment--UGxAD...  password=...  (expires 1h)
 Credential #2:  username=v-token-payment--ZNRma...  password=...  (different username)
 ```
 
-**What to say:** *"Each pod gets a unique rotating credential with a 1-hour TTL. No static passwords in env vars, Helm values, or ConfigMaps. In Kubernetes, the Vault Agent Injector reads pod annotations and writes secrets to a tmpfs volume — they never touch disk. Revoke one without affecting others. Every read is in the audit log — that's how we satisfy SOC 2 access control requirements."*
+**Analysis:** *"Each pod gets a unique rotating credential with a 1-hour TTL. No static passwords in env vars, Helm values, or ConfigMaps. In Kubernetes, the Vault Agent Injector reads pod annotations and writes secrets to a tmpfs volume — they never touch disk. Revoke one without affecting others. Every read is in the audit log — that's how we satisfy SOC 2 access control requirements."*
 
 See `k8s/vault/annotated-deployment.yaml` for the K8s sidecar injection pattern.
 
@@ -347,7 +347,7 @@ Expected output:
 PASS — privileged pod was rejected by Gatekeeper.
 ```
 
-**What to say:** *"The policy is a 15-line Rego file checked into git — version-controlled, peer-reviewed, enforced at admission time. No pod can bypass it by editing a config. This is how we implement Policy as Code for SOC 2 and PCI-DSS: the constraint IS the audit evidence."*
+**Analysis:** *"The policy is a 15-line Rego file checked into git — version-controlled, peer-reviewed, enforced at admission time. No pod can bypass it by editing a config. This is how we implement Policy as Code for SOC 2 and PCI-DSS: the constraint IS the audit evidence."*
 
 ---
 
@@ -386,7 +386,7 @@ capabilities:
 2. Go to **Discover** → create index pattern `filebeat-practice-*`
 3. The payment service writes structured JSON logs (event, payment_id, amount, status)
 
-**What to say:** *"The payment service logs to structured JSON via structlog — every transaction has a payment_id field so we can trace a single payment across all log lines. Filebeat ships them to Elasticsearch. In production we'd add Logstash for parsing and enrichment. This gives compliance teams a full audit trail: who authorized, what amount, what outcome."*
+**Analysis:** *"The payment service logs to structured JSON via structlog — every transaction has a payment_id field so we can trace a single payment across all log lines. Filebeat ships them to Elasticsearch. In production we'd add Logstash for parsing and enrichment. This gives compliance teams a full audit trail: who authorized, what amount, what outcome."*
 
 ---
 
@@ -439,7 +439,7 @@ The dashboard is divided into two columns — **Reliability**, **Security**, and
 
 ---
 
-**What to say:** *"SonarQube is the SAST gate in our pipeline — it catches security hotspots, hardcoded secrets, SQL injection patterns, and code smells before the image is ever built. The 4 security hotspots here are flagged for human review: they're not confirmed vulnerabilities but they require a developer to read and acknowledge them. The Quality Gate is configured to fail the pipeline if new Blocker issues are introduced or coverage drops below threshold — that's `sonar.qualitygate.wait=true` in the GitHub Actions job. Every PR gets gated before it can merge."*
+**Analysis:** *"SonarQube is the SAST gate in our pipeline — it catches security hotspots, hardcoded secrets, SQL injection patterns, and code smells before the image is ever built. The 4 security hotspots here are flagged for human review: they're not confirmed vulnerabilities but they require a developer to read and acknowledge them. The Quality Gate is configured to fail the pipeline if new Blocker issues are introduced or coverage drops below threshold — that's `sonar.qualitygate.wait=true` in the GitHub Actions job. Every PR gets gated before it can merge."*
 
 **Native arm64 scanner (faster):**
 ```bash
