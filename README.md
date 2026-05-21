@@ -108,84 +108,144 @@ You'll see 6 live panels:
 
 ---
 
-#### 3b. Run PromQL queries live in Explore
+#### 3b. Run PromQL queries — two ways
 
-This is where you demonstrate hands-on depth. The interviewer sees you write and interpret queries in real time.
+Every query below can be run **in the Grafana UI** (visual) or **from the terminal** (instant, no browser needed). Use whichever fits the moment — both hit the same Prometheus API.
 
-**How to open Explore:**
-1. Click **☰** (hamburger) → **Explore** (compass icon)
-2. Confirm the datasource at the top reads **Prometheus**
-3. Paste each query into the query box → press **Shift+Enter** or click **Run query**
-4. Use the **time range picker** (top right) and set it to **Last 15 minutes** for best visibility
+**Quick bash reference — all golden signals at once:**
+```bash
+bash observability/promql.sh --all
+```
+
+**Grafana Explore — how to switch to Code mode:**
+1. Click **☰** → **Explore** (compass icon)
+2. In the query panel, find the **`Builder | Code`** toggle on the right side of the `A (Prometheus)` row — click **Code**
+3. The dropdowns disappear and a plain text box appears — paste your PromQL there
+4. Press **Shift+Enter** or click **Run query**
+5. Set the time range (top right) to **Last 15 minutes**
 
 ---
 
 **Query 1 — Traffic: request rate per endpoint**
+
+*Grafana UI — paste in Code mode:*
 ```promql
 sum(rate(http_requests_total{job="tch-payment-app"}[1m])) by (endpoint)
 ```
-Returns requests-per-second broken out by endpoint as separate lines on the graph.
+
+*Bash:*
+```bash
+bash observability/promql.sh --traffic
+```
+```
+━━━ TRAFFIC — Request Rate (rps) by endpoint
+  endpoint=/api/payments       1.378
+  endpoint=/api/transactions   1.378
+  endpoint=/api/settlements    1.378
+  endpoint=/api/payments/...   0.355
+```
 
 - `rate()` computes per-second average over the time window
-- `[1m]` = 1-minute window — fast response for incident detection
-- `by (endpoint)` = split the result by the endpoint label
+- `[1m]` = 1-minute window — fast for live incident detection; use `[5m]` in alert rules to reduce noise
+- `by (endpoint)` = split the result per endpoint label
 
-> *Say: "This is the traffic golden signal. The [1m] window gives fast-moving data for real-time incident response. In alert rules I use [5m] to avoid noise from brief spikes. A sudden drop to zero on /api/payments is the first sign of an outage."*
+> *Say: "This is the traffic golden signal. A sudden drop to zero on /api/payments is the first sign of an outage — before any customer complains."*
 
 ---
 
 **Query 2 — Errors: 5xx error rate as a percentage**
+
+*Grafana UI — paste in Code mode:*
 ```promql
 sum(rate(http_requests_total{job="tch-payment-app",status_code=~"5.."}[1m]))
 /
 sum(rate(http_requests_total{job="tch-payment-app"}[1m]))
 * 100
 ```
-Returns a single number: the percentage of requests returning 5xx errors (e.g. `1.5` = 1.5%).
 
-- `status_code=~"5.."` is a **regex label matcher** — matches 500, 502, 503, 504, etc.
-- Dividing errors by total gives the error ratio; multiply by 100 for percentage
+*Bash:*
+```bash
+bash observability/promql.sh --errors
+```
+```
+━━━ ERRORS — 5xx Error Rate %
+  (all)                        0.787
 
-> *Say: "Our SLO target is 99.9% success — that's 0.1% max error rate. The `=~` operator is Prometheus regex matching on label values. If this stays above 0.1% for 2 minutes, the PaymentErrorRateHigh alert fires and pages the on-call."*
+━━━ ERRORS — Count by status code
+  endpoint=/api/payments  status_code=200    1.333
+  endpoint=/api/payments  status_code=500    0.044
+  endpoint=/api/payments/INVALID-999  status_code=404    0.355
+```
+
+- `status_code=~"5.."` is a **regex label matcher** — matches 500, 502, 503, 504 in one expression
+- Dividing errors by total gives the error ratio; ×100 for percentage
+
+> *Say: "Our SLO target is 99.9% — that's 0.1% max error rate. The `=~` operator is Prometheus regex matching. If this stays above 0.1% for 2 minutes, PaymentErrorRateHigh fires and pages the on-call."*
 
 ---
 
-**Query 3 — Latency: p99 per endpoint**
+**Query 3 — Latency: p99 and p50 per endpoint**
+
+*Grafana UI — paste Query A in Code mode, click `+ Add query` for Query B:*
 ```promql
+# Query A — p99
 histogram_quantile(0.99,
   sum(rate(http_request_duration_seconds_bucket{job="tch-payment-app"}[1m])) by (le, endpoint)
 )
-```
-Returns p99 latency in seconds for each endpoint.
 
-- `_bucket` is the histogram metric — it records how many requests fell into each latency band
-- `by (le, endpoint)` — `le` means "less than or equal to", the bucket boundary label; required for histogram_quantile
-- Change `0.99` → `0.50` for median latency
-
-**To show p99 and p50 on the same graph:** click **+ Add query** and paste:
-```promql
+# Query B — p50 (add as second query to overlay on the same graph)
 histogram_quantile(0.50,
   sum(rate(http_request_duration_seconds_bucket{job="tch-payment-app"}[1m])) by (le, endpoint)
 )
 ```
 
-> *Say: "histogram_quantile is the standard Prometheus pattern for computing percentiles. The gap between p50 and p99 shows tail latency — in a payment system a p99 of 800ms while p50 is 50ms means a small percentage of customers are waiting 16× longer. That's what we alert on, not the average."*
+*Bash:*
+```bash
+bash observability/promql.sh --latency
+```
+```
+━━━ LATENCY — p99 per endpoint (seconds)
+  endpoint=/api/transactions   0.845   ← 5% slow-path kicking in
+  endpoint=/api/payments       0.247
+  endpoint=/api/settlements    0.097
+
+━━━ LATENCY — p50 per endpoint (seconds)
+  endpoint=/api/transactions   0.064   ← p50 is fine; p99 is not
+  endpoint=/api/payments       0.113
+  endpoint=/api/settlements    0.037
+```
+
+- `_bucket` metric records how many requests fell into each pre-defined latency band
+- `by (le, endpoint)` — `le` = "less than or equal to", the bucket boundary; required for histogram_quantile
+- The gap between p99 and p50 is the tail latency story
+
+> *Say: "histogram_quantile is the standard Prometheus pattern for percentiles. The gap between p50 and p99 shows tail latency — p99 of 845ms while p50 is 64ms means a small slice of customers wait 13× longer. Averages completely hide this."*
 
 ---
 
 **Query 4 — Saturation: in-flight requests**
+
+*Grafana UI — paste in Code mode, then change visualization to **Stat** for a big live number:*
 ```promql
 http_requests_in_flight{job="tch-payment-app"}
 ```
-A simple Gauge — the number of requests currently being processed right now.
 
-To see it as a large number instead of a graph: click the **visualization type dropdown** (top left of the panel in Explore) → select **Stat**.
+*Bash:*
+```bash
+bash observability/promql.sh --saturation
+```
+```
+━━━ SATURATION — In-flight requests
+  instance=app:8080  job=tch-payment-app    2.000
+```
 
-> *Say: "Saturation is the hardest golden signal to measure because it's service-specific. In-flight requests is a leading indicator — when this climbs, latency follows seconds later. We alert at 50 in-flight to scale out before customers see degradation."*
+> *Say: "Saturation is the hardest golden signal because it's service-specific. In-flight requests is a leading indicator — when this climbs, latency follows seconds later. We alert at 50 to scale out before customers feel degradation."*
 
 ---
 
-**Query 5 — SLO burn rate: is the error budget burning too fast?**
+**Query 5 — SLO burn rate**
+
+*Grafana UI — paste in Code mode:*
 ```promql
 (
   1 - (
@@ -195,29 +255,32 @@ To see it as a large number instead of a graph: click the **visualization type d
   )
 ) * 100
 ```
-Returns the success rate % over the past hour (target: ≥ 99.9%).
 
-> *Say: "This is the SLO burn rate query. If I see 99.85% here, we've burned 15% of the month's error budget in one hour — at that rate the budget exhausts in 7 hours, not 30 days. That's the signal to freeze risky deploys and focus the team on reliability. We run this query on a 1h window for fast burn detection, and a 30d window for monthly budget reporting to stakeholders."*
+*Bash:*
+```bash
+bash observability/promql.sh --slo
+```
+```
+━━━ SLO — Success rate % over 1h (target ≥ 99.9%)
+  (all)                        99.619
+
+━━━ SLO — Payment errors by type (rate/s)
+  error_type=db_timeout        0.044
+  error_type=invalid_id        0.355
+```
+
+> *Say: "If this reads 99.5%, we've burned 5× our daily error budget in one hour — at that rate the monthly budget exhausts in 6 hours. That triggers a deploy freeze. We run a 1h window for fast-burn detection and a 30d window for monthly stakeholder reporting."*
 
 ---
 
-**Query 6 — Business metric: payment error breakdown**
-```promql
-sum(rate(payment_errors_total{job="tch-payment-app"}[1m])) by (error_type)
+**Query 6 — Custom query (any PromQL expression)**
+
+*Bash — run any expression directly:*
+```bash
+bash observability/promql.sh --query 'rate(http_requests_total{job="tch-payment-app"}[30s])'
 ```
-Returns per-second rate of payment-specific errors broken out by type (db_timeout, invalid_id).
 
-> *Say: "Beyond the four golden signals, we instrument business-level metrics using custom counters. A spike in db_timeout errors at 2am points to a database issue. A spike in invalid_id errors might mean a broken client — neither would surface clearly in a generic 5xx error rate because they get averaged in. These domain-specific metrics are how SRE bridges ops and the product team."*
-
----
-
-**Query 7 — Node-level saturation: CPU idle %**
-```promql
-100 - (avg by(instance)(rate(node_cpu_seconds_total{mode="idle"}[1m])) * 100)
-```
-Returns CPU utilization % from node-exporter (the host running all the containers).
-
-> *Say: "This is system-level saturation from node-exporter — independent of the application. We correlate this with in-flight request metrics to distinguish between 'the app is slow' and 'the host is overloaded'. In Kubernetes we'd use kube-state-metrics and container_cpu_usage_seconds_total instead."*
+> *Say: "In production I query Prometheus directly from bash in runbooks and incident scripts. When a page fires at 3am I don't want to open a browser — I run the script and see numbers immediately."*
 
 ---
 
