@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-CONTAINER="tch-practice-vault-1"
+CONTAINER="tch-mac-practice-vault-1"
 # Helper: run vault commands inside the container
 V() { docker exec -e VAULT_TOKEN=root -e VAULT_ADDR=http://127.0.0.1:8200 "$CONTAINER" vault "$@"; }
 

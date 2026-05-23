@@ -20,7 +20,7 @@ delete_ns() {
     fi
 }
 
-echo "Shutting down devops-tch-practice demo..."
+echo "Shutting down devops-tch-mac-practice demo..."
 
 # ── [1] Background scripts ───────────────────────────────────────────────────
 echo "[1/5] Stopping background scripts..."
@@ -39,7 +39,7 @@ else
 fi
 
 # ── [3] Docker Compose stack ─────────────────────────────────────────────────
-echo "[3/5] Stopping Docker Compose services (tch-practice)..."
+echo "[3/5] Stopping Docker Compose services (tch-mac-practice)..."
 COMPOSE_DIR="$(cd "$(dirname "$0")/observability" && pwd)"
 if docker compose -f "$COMPOSE_DIR/docker-compose.yml" ps -q 2>/dev/null | grep -q .; then
     docker compose -f "$COMPOSE_DIR/docker-compose.yml" down

@@ -1,4 +1,4 @@
-cd devops-tch-practice
+cd devops-tch-mac-practice
 
 # Stage everything
 git add .github/ k8s/ terraform/ observability/ Jenkinsfile

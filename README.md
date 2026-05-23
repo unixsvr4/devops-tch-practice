@@ -1,4 +1,4 @@
-# devops-tch-practice
+# devops-tch-mac-practice
 Sr. DevOps practice for **The Clearing House** — financial payments company.
 Everything runs locally on **Mac M1 with OrbStack**. No AWS account needed.
 
@@ -21,7 +21,7 @@ Everything runs locally on **Mac M1 with OrbStack**. No AWS account needed.
 ## What's in this repo
 
 ```
-devops-tch-practice/
+devops-tch-mac-practice/
 ├── app/                        ← FastAPI payment service (golden signals + structured logs)
 ├── k8s/
 │   ├── app/payment-deployment.yaml   ← K8s deployment (HPA, non-root, readiness probes)
@@ -47,7 +47,7 @@ devops-tch-practice/
 ### Step 1 — Start the full stack
 
 ```bash
-cd devops-tch-practice/observability
+cd devops-tch-mac-practice/observability
 bash observability_stack.sh
 ```
 
@@ -76,7 +76,7 @@ All 10 services should show `Up` or `(healthy)`:
 Open a second terminal:
 
 ```bash
-cd devops-tch-practice/observability
+cd devops-tch-mac-practice/observability
 bash generate_traffic.sh &
 ```
 
@@ -472,7 +472,7 @@ commit → lint + pytest → SAST (Bandit) ──┐→ deploy staging (stub)
 ### Step 10 — Shut down everything
 
 ```bash
-cd devops-tch-practice
+cd devops-tch-mac-practice
 bash shutdown.sh
 ```
 
